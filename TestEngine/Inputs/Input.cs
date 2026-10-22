@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Raylib_cs;
 
-namespace TestEngine.Input;
+namespace TestEngine.Inputs;
 
 public static class Input
 {
@@ -46,6 +46,10 @@ public static class Input
         return false;
     }
 
+    public static bool IsKeyPressed(KeyboardKey key) => Raylib.IsKeyPressed(key);
+    public static bool IsKeyDown(KeyboardKey key) => Raylib.IsKeyDown(key);
+    public static bool IsKeyReleased(KeyboardKey key) => Raylib.IsKeyReleased(key);
+
     public static Vector2 GetMovementVector()
     {
         Vector2 direction = Vector2.Zero;
@@ -88,5 +92,15 @@ public static class Input
     public static bool IsLeftMouseDown()
     {
         return Raylib.IsMouseButtonDown(MouseButton.Left);
+    }
+
+    public static bool IsRightMousePressed()
+    {
+        return Raylib.IsMouseButtonPressed(MouseButton.Right);
+    }
+    
+    public static bool IsRightMouseDown()
+    {
+        return Raylib.IsMouseButtonDown(MouseButton.Right);
     }
 }

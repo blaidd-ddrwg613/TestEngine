@@ -1,45 +1,53 @@
-﻿namespace TestEngine.Graphics;
+namespace TestEngine.Graphics;
 
-public class Animation
+public enum AnimationPlaybackMode
 {
-    /// <summary>
-    /// The texture regions that make up the frames of this animation.  The order of the regions within the collection
-    /// are the order that the frames should be displayed in.
-    /// </summary>
-    public List<TextureRegion> Frames { get; set; }
+    Loop,
+    Once,
+    PingPong
+}
 
-    /// <summary>
-    /// The amount of time to delay between each frame before moving to the next frame for this animation.
-    /// </summary>
-    public TimeSpan Delay { get; set; } = TimeSpan.FromMilliseconds(100);
+public sealed class Animation
+{
+    private readonly TextureRegion[] _frames;
+    private readonly IReadOnlyList<TextureRegion> _readOnlyFrames;
 
-    /// <summary>
-    /// Creates a new animation.
-    /// </summary>
-    public Animation()
+    public IReadOnlyList<TextureRegion> Frames => _readOnlyFrames;
+
+    public TimeSpan Delay { get; }
+
+    public AnimationPlaybackMode PlaybackMode { get; }
+
+    public Animation(
+        IEnumerable<TextureRegion> frames,
+        TimeSpan delay,
+        AnimationPlaybackMode playbackMode = AnimationPlaybackMode.Loop)
     {
-        Frames = new List<TextureRegion>();
-        Delay = TimeSpan.FromMilliseconds(100);
-    }
+        ArgumentNullException.ThrowIfNull(frames);
 
-    /// <summary>
-    /// Creates a new animation with the specified frames and delay.
-    /// </summary>
-    /// <param name="frames">An ordered collection of the frames for this animation.</param>
-    /// <param name="delay">The amount of time to delay between each frame of this animation.</param>
-    public Animation(List<TextureRegion> frames, TimeSpan delay)
-    {
-        Frames = frames;
+        if (delay <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(delay), "Animation delay must be greater than zero.");
+        }
+
+        if (!Enum.IsDefined(playbackMode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(playbackMode));
+        }
+
+        _frames = frames.ToArray();
+        if (_frames.Length == 0)
+        {
+            throw new ArgumentException("An animation must contain at least one frame.", nameof(frames));
+        }
+
+        if (_frames.Any(frame => frame is null))
+        {
+            throw new ArgumentException("Animation frames cannot contain null regions.", nameof(frames));
+        }
+
+        _readOnlyFrames = Array.AsReadOnly(_frames);
         Delay = delay;
-    }
-
-    public void AddFrame(TextureRegion region)
-    {
-        Frames.Add(region);
-    }
-
-    public void AddFrames(List<TextureRegion> frames)
-    {
-        Frames = frames;
+        PlaybackMode = playbackMode;
     }
 }

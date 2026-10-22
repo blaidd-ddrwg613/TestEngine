@@ -1,9 +1,9 @@
 ﻿using System.Numerics;
 using TestEngine.Graphics;
-using TestEngine.Input;
+using TestEngine.Inputs;
 using TestEngine.Utils;
 
-namespace TestEditor;
+namespace TestEditor.player;
 
 public enum PlayerDirection
 {
@@ -15,25 +15,29 @@ public enum PlayerDirection
 
 public class Player : AnimatedSprite
 {
+    private readonly AnimationManager _animations;
+
     public Vector2 Position { get; set; } = Vector2.One;
 
     public float MovementSpeed { get; set; } = 100f;
 
+    public float SprintModifier { get; set; } = 1.5f;
+
+    public bool IsSprinting { get; set; }
+
     public PlayerDirection Direction { get; set; } = PlayerDirection.Forward;
 
-    private bool _isMoving;
-
-    public Player(Vector2 position = default)
+    public Player(AnimationManager animations, Vector2 position = default)
     {
+        _animations = animations ?? throw new ArgumentNullException(nameof(animations));
+
         if (position != default)
         {
             Position = position;
         }
 
         Scale = new Vector2(2, 2);
-
-        // Set starting anim
-        CurrentAnimation = AnimationManager.Idle.AnimationAtlas.GetAnimation("idle_front");
+        Play(_animations.GetAnimation("idle_front"));
     }
     
     public override void Update(GameTime gameTime)
@@ -41,24 +45,17 @@ public class Player : AnimatedSprite
         Vector2 direction = Input.GetMovementVector();
         if (direction != Vector2.Zero)
         {
-            Direction = GetDirection(direction);
+            Direction = ResolveFacingDirection(direction, Direction);
         }
-
-        _isMoving = direction != Vector2.Zero;
-
-        var facing = Direction switch
-        {
-            PlayerDirection.Forward => "_front",
-            PlayerDirection.Back => "_back",
-            PlayerDirection.Left => "_side",
-            PlayerDirection.Right => "_side",
-            _ => "_front"
-        };
+        IsSprinting = Input.IsActionDown(InputAction.Sprint);
 
         FlipX = Direction == PlayerDirection.Left;
-        SetAnimation($"{(_isMoving ? "walk" : "idle")}{facing}");
+        SetAnimation(GetAnimationName(direction != Vector2.Zero, IsSprinting, Direction));
 
-        Position += direction * MovementSpeed * gameTime.DeltaTime;
+        var movementSpeed = direction != Vector2.Zero && IsSprinting
+            ? MovementSpeed * SprintModifier
+            : MovementSpeed;
+        Position += direction * movementSpeed * gameTime.DeltaTime;
         base.Update(gameTime);
     }
 
@@ -67,24 +64,50 @@ public class Player : AnimatedSprite
         base.Draw(Position);
     }
     
-    private PlayerDirection GetDirection(Vector2 movementVector)
+    public static PlayerDirection ResolveFacingDirection(
+        Vector2 movementVector,
+        PlayerDirection currentDirection)
     {
-        var direction = Direction;
-        
-        if (movementVector.Y > 0) direction = PlayerDirection.Forward;
-        if (movementVector.Y < 0) direction = PlayerDirection.Back;
-        if (movementVector.X > 0) direction = PlayerDirection.Right;
-        if (movementVector.X < 0) direction = PlayerDirection.Left;
-        
-        return direction;
+        if (movementVector == Vector2.Zero)
+        {
+            return currentDirection;
+        }
+
+        if (currentDirection is PlayerDirection.Left or PlayerDirection.Right && movementVector.X != 0)
+        {
+            return movementVector.X > 0 ? PlayerDirection.Right : PlayerDirection.Left;
+        }
+
+        if (currentDirection is PlayerDirection.Forward or PlayerDirection.Back && movementVector.Y != 0)
+        {
+            return movementVector.Y > 0 ? PlayerDirection.Forward : PlayerDirection.Back;
+        }
+
+        if (Math.Abs(movementVector.X) > Math.Abs(movementVector.Y))
+        {
+            return movementVector.X > 0 ? PlayerDirection.Right : PlayerDirection.Left;
+        }
+
+        return movementVector.Y > 0 ? PlayerDirection.Forward : PlayerDirection.Back;
     }
-    
+
+    public static string GetAnimationName(bool isMoving, bool isSprinting, PlayerDirection direction)
+    {
+        string prefix = !isMoving ? "idle" : isSprinting ? "run" : "walk";
+        string facing = direction switch
+        {
+            PlayerDirection.Forward => "_front",
+            PlayerDirection.Back => "_back",
+            PlayerDirection.Left or PlayerDirection.Right => "_side",
+            _ => throw new ArgumentOutOfRangeException(nameof(direction), direction, null)
+        };
+
+        return prefix + facing;
+    }
+
     private void SetAnimation(string name)
     {
-        Animation animation = _isMoving
-            ? AnimationManager.Walk.AnimationAtlas.GetAnimation(name)
-            : AnimationManager.Idle.AnimationAtlas.GetAnimation(name);
-
+        Animation animation = _animations.GetAnimation(name);
         if (!ReferenceEquals(CurrentAnimation, animation))
         {
             Play(animation);

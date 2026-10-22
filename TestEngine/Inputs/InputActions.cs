@@ -1,4 +1,4 @@
-﻿namespace TestEngine.Input;
+﻿namespace TestEngine.Inputs;
 
 public readonly record struct InputAction(string Name)
 {

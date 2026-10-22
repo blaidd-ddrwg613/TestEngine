@@ -66,7 +66,9 @@ public abstract class BaseGame
     protected virtual void LoadContent() { }
 
     protected virtual void Update(GameTime gameTime) { }
+
     protected virtual void Draw(GameTime gameTime) { }
+    
     protected virtual void UnloadContent() { }
     protected virtual void OnResize(int width, int height) { }
     

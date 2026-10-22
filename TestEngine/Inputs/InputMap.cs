@@ -1,6 +1,6 @@
 ﻿using Raylib_cs;
 
-namespace TestEngine.Input;
+namespace TestEngine.Inputs;
 
 public sealed class InputMap
 {
